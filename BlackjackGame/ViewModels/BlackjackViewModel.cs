@@ -3,15 +3,15 @@ using System.Runtime.CompilerServices;
 using System.Windows.Input;
 using BlackjackGame.Common;
 using BlackjackGame.Model;
+using BlackjackGame.Model.Enums;    
 
 namespace BlackjackGame.ViewModels
 {
     public class BlackjackViewModel : INotifyPropertyChanged
     {
+        private GameEngine gameEngine;
         private Hand dealerHand;
         private Hand playerHand;
-        private Card dealerCard;
-        private Desk desk;
         private ICommand hitCommand;
         private ICommand standCommand;
         private ICommand newGameCommand;
@@ -23,24 +23,24 @@ namespace BlackjackGame.ViewModels
         private int lastCreditChange;
         private string creditChangeMessage;
 
-        public enum GameState
-        {
-            Playing,
-            PlayerBusted,
-            StandingWait,
-            GameOver,
-            RoundOver
-        }
-
         public Hand DealerHand
         {
             get => dealerHand;
-            set
+            private set
             {
                 if (dealerHand != value)
                 {
+                    if (dealerHand != null)
+                    {
+                        dealerHand.PropertyChanged -= Hand_PropertyChanged;
+                    }
                     dealerHand = value;
+                    if (dealerHand != null)
+                    {
+                        dealerHand.PropertyChanged += Hand_PropertyChanged;
+                    }
                     OnPropertyChanged();
+                    OnPropertyChanged(nameof(DealerHandValue));
                 }
             }
         }
@@ -48,25 +48,36 @@ namespace BlackjackGame.ViewModels
         public Hand PlayerHand
         {
             get => playerHand;
-            set
+            private set
             {
                 if (playerHand != value)
                 {
+                    if (playerHand != null)
+                    {
+                        playerHand.PropertyChanged -= Hand_PropertyChanged;
+                    }
                     playerHand = value;
+                    if (playerHand != null)
+                    {
+                        playerHand.PropertyChanged += Hand_PropertyChanged;
+                    }
                     OnPropertyChanged();
+                    OnPropertyChanged(nameof(PlayerHandValue));
                 }
             }
         }
 
-        public Card DealerCard
+        private void Hand_PropertyChanged(object sender, PropertyChangedEventArgs e)
         {
-            get => dealerCard;
-            set
+            if (e.PropertyName == nameof(Hand.Value) || e.PropertyName == nameof(Hand.IsBusted))
             {
-                if (dealerCard != value)
+                if (sender == dealerHand)
                 {
-                    dealerCard = value;
-                    OnPropertyChanged();
+                    OnPropertyChanged(nameof(DealerHandValue));
+                }
+                else if (sender == playerHand)
+                {
+                    OnPropertyChanged(nameof(PlayerHandValue));
                 }
             }
         }
@@ -202,34 +213,22 @@ namespace BlackjackGame.ViewModels
 
         public BlackjackViewModel()
         {
+            gameEngine = new GameEngine();
             gameState = GameState.Playing;
-            credits = 5;
+            credits = gameEngine.Credits;
             gameStatus = "Game started. Your move!";
             lastCreditChange = 0;
             creditChangeMessage = "";
-            InitializeGame();
+            InitializeRound();
         }
 
-        private void InitializeGame()
+        private void InitializeRound()
         {
-            desk = new Desk();
-            DealerHand = new Hand();
-            PlayerHand = new Hand();
+            gameEngine.InitializeRound();
 
-            // Deal initial cards
-            var dealerCard1 = desk.Draw();
-            var dealerCard2 = desk.Draw();
-            dealerCard2.IsHidden = true; // Hide the dealer's hole card
-
-            DealerHand.Cards.Add(dealerCard1);
-            DealerHand.Cards.Add(dealerCard2);
-
-            PlayerHand.Cards.Add(desk.Draw());
-            PlayerHand.Cards.Add(desk.Draw());
-
-            // Notify UI of hand value changes
-            OnPropertyChanged(nameof(DealerHandValue));
-            OnPropertyChanged(nameof(PlayerHandValue));
+            // Update hand references (this triggers property change notifications through our handlers)
+            DealerHand = gameEngine.DealerHand;
+            PlayerHand = gameEngine.PlayerHand;
 
             // Clear previous round credit messages after showing the new hand
             LastCreditChange = 0;
@@ -251,21 +250,16 @@ namespace BlackjackGame.ViewModels
             if (CurrentGameState != GameState.Playing)
                 return;
 
-            PlayerHand.Cards.Add(desk.Draw());
-            OnPropertyChanged(nameof(PlayerHandValue));
+            var hitResult = gameEngine.ProcessHit();
 
-            int playerValue = PlayerHand.getValue();
-
-            if (PlayerHand.IsBusted)
+            if (hitResult.IsBusted)
             {
                 CurrentGameState = GameState.PlayerBusted;
-                GameStatus = $"Bust! You have {playerValue}. Dealer wins!";
-
-                LastCreditChange = -1;
-                Credits -= 1;
+                LastCreditChange = hitResult.CreditsChanged;
+                Credits = gameEngine.Credits;
                 CreditChangeMessage = "-1 Credit";
 
-                if (Credits <= 0)
+                if (hitResult.IsGameOver)
                 {
                     CurrentGameState = GameState.GameOver;
                     GameStatus = "Game Over! You're out of credits! Click 'New Game' to start again.";
@@ -273,16 +267,18 @@ namespace BlackjackGame.ViewModels
                 else
                 {
                     CurrentGameState = GameState.RoundOver;
-                    GameStatus = $"Bust! You have {playerValue}. Dealer wins! Click 'Next Game' to continue.";
+                    GameStatus = $"Bust! You have {hitResult.PlayerValue}. Dealer wins! Click 'Next Game' to continue.";
                 }
             }
-            else if (playerValue == 21)
+            else if (hitResult.AutoStand)
             {
-                GameStatus = $"You have 21! Your turn is over.";
+                // Player got 21 after hitting, automatically stand
+                GameStatus = $"You have 21! Dealer's turn...";
+                Stand();
             }
             else
             {
-                GameStatus = $"You have {playerValue}. Hit or Stand?";
+                GameStatus = $"You have {hitResult.PlayerValue}. Hit or Stand?";
             }
         }
 
@@ -294,65 +290,39 @@ namespace BlackjackGame.ViewModels
             CurrentGameState = GameState.StandingWait;
             GameStatus = "Dealer's turn...";
 
-            // Reveal dealer's hole card
-            if (DealerHand.Cards.Count >= 2)
-            {
-                DealerHand.Cards[1].IsHidden = false;
-                OnPropertyChanged(nameof(DealerHandValue));
-            }
+            // Reveal dealer's hole card and dealer plays
+            var roundResult = gameEngine.ProcessStand();
 
-            // Dealer hits until reaching 17 or higher
-            while (DealerHand.getValue() < 17)
-            {
-                DealerHand.Cards.Add(desk.Draw());
-                OnPropertyChanged(nameof(DealerHandValue));
-            }
-
-            DetermineWinner();
+            DetermineWinner(roundResult);
         }
 
-        private void DetermineWinner()
+        private void DetermineWinner(RoundResult roundResult)
         {
-            int playerValue = PlayerHand.getValue();
-            int dealerValue = DealerHand.getValue();
+            Credits = gameEngine.Credits;
+            LastCreditChange = roundResult.CreditsChanged;
 
-            if (dealerValue > 21)
+            if (roundResult.CreditsChanged == 1)
             {
-                LastCreditChange = 1;
-                Credits += 1;
                 CreditChangeMessage = "+1 Credit";
-                GameStatus = $"Dealer busts with {dealerValue}! You win! (You: {playerValue}, Credits: {Credits})";
             }
-            else if (playerValue > dealerValue)
+            else if (roundResult.CreditsChanged == -1)
             {
-                LastCreditChange = 1;
-                Credits += 1;
-                CreditChangeMessage = "+1 Credit";
-                GameStatus = $"You win! (You: {playerValue}, Dealer: {dealerValue}, Credits: {Credits})";
-            }
-            else if (dealerValue > playerValue)
-            {
-                LastCreditChange = -1;
-                Credits -= 1;
                 CreditChangeMessage = "-1 Credit";
-                GameStatus = $"Dealer wins! (You: {playerValue}, Dealer: {dealerValue}, Credits: {Credits})";
             }
             else
             {
-                LastCreditChange = 0;
                 CreditChangeMessage = "Tie - No Change";
-                GameStatus = $"Push! It's a tie! (Both: {playerValue}, Credits: {Credits})";
             }
 
-            if (Credits <= 0)
+            if (roundResult.IsGameOver)
             {
                 CurrentGameState = GameState.GameOver;
-                GameStatus = "Game Over! You're out of credits! Click 'New Game' to start again with 5 credits.";
+                GameStatus = $"{roundResult.Outcome} Game Over! You're out of credits! Click 'New Game' to start again with 5 credits.";
             }
             else
             {
                 CurrentGameState = GameState.RoundOver;
-                GameStatus += " Click 'Next Game' to continue.";
+                GameStatus = $"{roundResult.Outcome} (Credits: {Credits}) Click 'Next Game' to continue.";
             }
         }
 
@@ -363,21 +333,21 @@ namespace BlackjackGame.ViewModels
             CreditChangeMessage = "";
             CurrentGameState = GameState.Playing;
             GameStatus = "Game started. Your move!";
-            InitializeGame();
+            InitializeRound();
         }
 
         private void NewGame()
         {
-            // Reset credits to 5 and start fresh
-            credits = 5;
-            Credits = 5;
+            // Reset game engine to start fresh with 5 credits
+            gameEngine = new GameEngine();
+            Credits = gameEngine.Credits;
 
             // Clear previous round data before starting fresh
             LastCreditChange = 0;
             CreditChangeMessage = "";
             CurrentGameState = GameState.Playing;
             GameStatus = "Game started. Your move!";
-            InitializeGame();
+            InitializeRound();
         }
 
         private void StopPlaying()

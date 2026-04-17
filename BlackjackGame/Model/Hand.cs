@@ -1,13 +1,32 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
+using System.Runtime.CompilerServices;
 using System.Text;
 
 namespace BlackjackGame.Model
 {
-    public class Hand
+    public class Hand : INotifyPropertyChanged
     {
-        public ObservableCollection<Card> Cards { get; } = new ObservableCollection<Card>();
+        public ObservableCollection<Card> Cards { get; }
+
+        public event PropertyChangedEventHandler PropertyChanged;
+
+        public Hand()
+        {
+            Cards = new ObservableCollection<Card>();
+            Cards.CollectionChanged += (s, e) =>
+            {
+                OnPropertyChanged(nameof(Value));
+                OnPropertyChanged(nameof(IsBusted));
+            };
+        }
+
+        public int Value
+        {
+            get => getValue();
+        }
 
         public int getValue()
         {
@@ -28,6 +47,12 @@ namespace BlackjackGame.Model
             }
             return value;
         }
+
         public bool IsBusted => getValue() > 21;
+
+        protected void OnPropertyChanged([CallerMemberName] string propertyName = null)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
     }
 }

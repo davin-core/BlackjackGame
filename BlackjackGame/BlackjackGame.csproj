@@ -6,6 +6,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
+    <ApplicationIcon>playing-cards.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>
@@ -63,6 +64,10 @@
     <None Remove="Assets\Cards\spades_J.png" />
     <None Remove="Assets\Cards\spades_K.png" />
     <None Remove="Assets\Cards\spades_Q.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="playing-cards.ico" />
   </ItemGroup>
 
   <ItemGroup>
