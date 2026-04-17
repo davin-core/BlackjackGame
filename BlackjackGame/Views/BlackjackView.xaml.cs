@@ -1,6 +1,5 @@
-﻿using System.Windows;
+﻿using BlackjackGame.ViewModels;
 using System.Windows.Controls;
-using BlackjackGame.ViewModels;
 
 
 namespace BlackjackGame.Views
@@ -13,7 +12,6 @@ namespace BlackjackGame.Views
         public BlackjackView()
         {
             InitializeComponent();
-            DataContext = new BlackjackViewModel();
         }
     }
 }

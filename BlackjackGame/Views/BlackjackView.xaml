@@ -4,6 +4,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:BlackjackGame.Views"
+        Focusable="True"     
         mc:Ignorable="d">
 
     <Grid Background="#1B5E20">
@@ -45,10 +46,11 @@
                            FontSize="20"
                            FontWeight="Bold"
                            Foreground="White"/>
-                <TextBlock Text="{Binding DealerHandValue}"
+                <!--<TextBlock Text="{Binding DealerHandValue}"
                            FontSize="16"
                            Foreground="Yellow"
                            Margin="20,0,0,0"/>
+                -->
             </StackPanel>
 
             <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">

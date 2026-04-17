@@ -21,6 +21,33 @@ namespace BlackjackGame
         {
             InitializeComponent();
             DataContext = new BlackjackViewModel();
+            this.PreviewKeyDown += MainWindow_PreviewKeyDown;
+        }
+
+        private void MainWindow_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            var viewModel = DataContext as BlackjackViewModel;
+            if (viewModel == null)
+                return;
+
+            switch (e.Key)
+            {
+                case Key.H:
+                    if (viewModel.HitCommand.CanExecute(null))
+                    {
+                        viewModel.HitCommand.Execute(null);
+                        e.Handled = true;
+                    }
+                    break;
+
+                case Key.S:
+                    if (viewModel.StandCommand.CanExecute(null))
+                    {
+                        viewModel.StandCommand.Execute(null);
+                        e.Handled = true;
+                    }
+                    break;
+            }
         }
     }
 }

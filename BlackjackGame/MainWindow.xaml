@@ -6,9 +6,38 @@
         xmlns:local="clr-namespace:BlackjackGame"
         mc:Ignorable="d"
         xmlns:views="clr-namespace:BlackjackGame.Views"
-        Title="Blackjack" Height="600" Width="1000" WindowStartupLocation="CenterScreen">
+        Height="1000" Width="1200" WindowStartupLocation="CenterScreen">
     <Grid>
-        <views:BlackjackView HorizontalAlignment="Stretch"
-                              VerticalAlignment="Stretch"/>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- HEADER -->
+        <Border Background="#222" Padding="10">
+            <TextBlock Text="Blackjack"
+                   Foreground="White"
+                   FontSize="18"/>
+        </Border>
+
+        <!-- GAME -->
+        <Border Grid.Row="1"
+            Background="DarkGreen"
+            Padding="10"
+            Margin="10"
+            CornerRadius="10">
+
+            <views:BlackjackView />
+
+        </Border>
+
+        <!-- FOOTER -->
+        <Border Grid.Row="2" Background="#222" Padding="10">
+            <TextBlock Text="Press H to Hit, S to Stand"
+                   Foreground="White"/>
+        </Border>
+
     </Grid>
+
 </Window>

@@ -164,21 +164,4 @@ namespace BlackjackGame.Model
         }
     }
 
-    public class HitResult
-    {
-        public bool IsBusted { get; set; }
-        public int PlayerValue { get; set; }
-        public int CreditsChanged { get; set; }
-        public bool IsGameOver { get; set; }
-        public bool AutoStand { get; set; }
-    }
-
-    public class RoundResult
-    {
-        public int PlayerValue { get; set; }
-        public int DealerValue { get; set; }
-        public string Outcome { get; set; }
-        public int CreditsChanged { get; set; }
-        public bool IsGameOver { get; set; }
-    }
 }
